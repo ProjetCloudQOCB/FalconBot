@@ -37,7 +37,7 @@ Permet de connaître la météo d'une ville
 
 ### Google Translate
 
-Permet de traduire un mot/une phrase de n'importe quelle langue en anglais
+Permet de traduire du contenu de n'importe quelle langue en anglais
 
 ```
 !translate Bonjour
