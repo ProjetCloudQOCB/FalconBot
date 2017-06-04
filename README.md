@@ -1,6 +1,6 @@
 # Falcon bot
 
-Un bot Discord utilisant les API de Facebook, Twitter, Youtube, Google Translate, Open Weather Map et Pokemon
+Un bot Discord utilisant les API de Youtube, Twitter, Spotify, Google Translate, Open Weather Map et PokeAPI
 
 ## Membres du groupe
 
@@ -8,6 +8,10 @@ Un bot Discord utilisant les API de Facebook, Twitter, Youtube, Google Translate
 * Adrien Cosson
 * Amine Ouddiz
 * Antoine Quinquenel
+
+## Url Azure
+
+http://falconbot.azurewebsites.net
 
 ## Commandes disponibles
 
@@ -21,4 +25,20 @@ Permet de rechercher du contenu sur Youtube (vidéos, chaînes, playlists et liv
 !youtube pop playlist
 
 !youtube sport live
+```
+
+### Open Weather Map
+
+Permet de connaître la météo d'une ville
+
+```
+!weather Santa Monica
+```
+
+### Google Translate
+
+Permet de traduire un mot/une phrase de n'importe quelle langue en anglais
+
+```
+!translate Bonjour
 ```

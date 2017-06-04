@@ -129,6 +129,7 @@ client.on('message', msg => {
                 break
               case 'Atmosphere':
               case 'Haze':
+              case 'Mist':
                 w = 'brumeux'
                 break
               case 'Clear':
