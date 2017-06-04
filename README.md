@@ -4,10 +4,10 @@ Un bot Discord utilisant les API de Youtube, Twitter, Spotify, Google Translate,
 
 ## Membres du groupe
 
-* Clément Becret
-* Adrien Cosson
-* Amine Ouddiz
-* Antoine Quinquenel
+* [Clément Becret](https://github.com/ClementBECRET)
+* [Adrien Cosson](https://github.com/adriencossonscpo)
+* [Amine Ouddiz](https://github.com/Amineodz)
+* [Antoine Quinquenel](https://github.com/aquinq)
 
 ## Url Azure
 
