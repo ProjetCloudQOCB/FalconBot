@@ -4,6 +4,6 @@ node_js:
 script:
   - ./node_modules/.bin/eslint .
   - ./node_modules/.bin/ava --verbose tests\
-#deploy:
-  #provider: azure_web_apps
-  #verbose: true
+deploy:
+  provider: azure_web_apps
+  verbose: true
