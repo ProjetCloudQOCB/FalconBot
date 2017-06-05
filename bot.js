@@ -143,9 +143,11 @@ client.on('message', msg => {
                 break
             }
             if (w === undefined) {
-              w = '"' + data.weather[0].main + '"'
+              w = '"' + data.weather[0].main.toLowerCase() + '"'
+              msg.channel.send('Hi ' + msg.author + ',\n\tCurrently in ' + city + ' (' + country + '), the temperature is ' + temperature + '°C and the weather is ' + w)
+            } else {
+              msg.channel.send('Bonjour ' + msg.author + ',\n\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + ') et le temps est ' + w)
             }
-            msg.channel.send('Bonjour ' + msg.author + ',\n\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + ') et le temps est ' + w)
           }
         })
       } else if (api === 'translate') {
