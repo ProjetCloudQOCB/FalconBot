@@ -156,6 +156,12 @@ client.on('message', msg => {
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
+      } else if (api === 'spotify') {
+        message = a.toString().replace(/ /gm, '+')
+        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQDaac7-KtPKjIi-Cz1eXtmN3ydLK0WZNS5p3_taxcdAVCDARP4TLFN9rZqovkQQVws4lWlmzaLldQ91xwVpwSDUXFdfWX__60OS6jwwZMuLxR-jeMy75nA0urpkgmQMc1GkAssc8aAQ'})
+        promise.then(function (data) {
+          console.log(JSON.stringify(data))
+        })
       } else {
         console.log(msg.author.id + ', ' + client.user.id)
         if (msg.author.id === client.user.id) { // Si on teste le bot dans une conversation privée, le paramètre msg.channel.type est égal à 'dm' : le bot se parle à lui-même
@@ -171,15 +177,17 @@ client.on('message', msg => {
   * @param {String} type : type de la requête (http ou https)
   * @param {String} host : nom de domaine ou adresse IP du serveur auquel on envoie la requête
   * @param {String} path : chemin de la requête
+  * @param {Object} headers : en-tête de la requête
   *
   * @return {Promise} promise : Objet promise contenant les données récupérées
   */
-  function callAPI (type, host, path) {
+  function callAPI (type, host, path, headers) {
     var data = ''
     var promise = new Promise(function (resolve, reject) {
       const options = {
         host: host,
         path: path,
+        headers: headers,
         family: 4
       }
       type.request(options, (res) => {
