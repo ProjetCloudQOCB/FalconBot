@@ -23,9 +23,9 @@ client.on('message', msg => {
     if (msg.content === '!help') {
       msg.channel.send(
         '\nCommandes disponibles :\n\n\n' +
-        '\tyoutube:NOM_VIDEO : Effectuer une recherche sur Youtube (Chaîne, vidéo, live ou playlist).\n\n' +
-        '\tweather:NOM_VILLE : Obtenir les informations météorologiques d\'une ville.\n\n' +
-        '\ttranslate:PHRASE : Traduire un mot / une phrase de n\'importe quelle langue en anglais.'
+        '\t!youtube NOM_VIDEO : Effectuer une recherche sur Youtube (Chaîne, vidéo, live ou playlist).\n\n' +
+        '\t!weather NOM_VILLE : Obtenir les informations météorologiques d\'une ville.\n\n' +
+        '\t!translate PHRASE : Traduire un mot / une phrase de n\'importe quelle langue en anglais.'
       )
     } else {
       var request = String(msg.content)
@@ -55,7 +55,12 @@ client.on('message', msg => {
                   var live = data.items[0].snippet.liveBroadcastContent
                   var views = data.items[0].statistics.viewCount
                   if (live === 'live') {
-                    msg.channel.send('Live : \n\tChaîne : ' + channel + '\n\tTitre : ' + title + '\n\tVues totales : ' + views)
+                    msg.channel.send(
+                      'Live : \n' +
+                        '\tChaîne : ' + channel + '\n' +
+                        '\tTitre : ' + title + '\n' +
+                        '\tVues totales : ' + views
+                    )
                   } else {
                     var d = data.items[0].contentDetails.duration.split('PT').pop()
                     var h
@@ -78,7 +83,13 @@ client.on('message', msg => {
                     duration += (h != null) ? h + ':' : ''
                     duration += (m != null) ? m + ':' : ''
                     duration += s
-                    msg.channel.send('Video : \n\tChaîne : ' + channel + '\n\tTitre : ' + title + '\n\tDurée : ' + duration + '\n\tVues : ' + views)
+                    msg.channel.send(
+                      'Video : \n' +
+                        '\tChaîne : ' + channel + '\n' +
+                        '\tTitre : ' + title + '\n' +
+                        '\tDurée : ' + duration + '\n' +
+                        '\tVues : ' + views
+                    )
                   }
                 })
               } else if (kind === 'channel') {
@@ -88,7 +99,12 @@ client.on('message', msg => {
                   var nom = data.items[0].snippet.title
                   var videos = data.items[0].statistics.videoCount
                   var subscribers = data.items[0].statistics.subscriberCount
-                  msg.channel.send('Chaîne : \n\tNom : ' + nom + '\n\tNombre de vidéos : ' + videos + '\n\tNombre d\'abonnés : ' + subscribers)
+                  msg.channel.send(
+                    'Chaîne : \n' +
+                      '\tNom : ' + nom + '\n' +
+                      '\tNombre de vidéos : ' + videos + '\n' +
+                      '\tNombre d\'abonnés : ' + subscribers
+                  )
                 })
               } else if (kind === 'playlist') {
                 var playlistId = result.id.playlistId
@@ -97,7 +113,12 @@ client.on('message', msg => {
                   var title = data.items[0].snippet.title
                   var channel = data.items[0].snippet.channelTitle
                   var videos = data.items[0].contentDetails.itemCount
-                  msg.channel.send('Playlist : \n\tChaîne : ' + channel + '\n\tTitre : ' + title + '\n\tNombre de vidéos : ' + videos)
+                  msg.channel.send(
+                    'Playlist : \n' +
+                      '\tChaîne : ' + channel + '\n' +
+                      '\tTitre : ' + title + '\n' +
+                      '\tNombre de vidéos : ' + videos
+                  )
                 })
               }
             }
@@ -144,15 +165,33 @@ client.on('message', msg => {
             }
             if (w === undefined) {
               w = '"' + data.weather[0].main.toLowerCase() + '"'
-              msg.channel.send('Hi ' + msg.author + ',\n\tCurrently in ' + city + ' (' + country + '), the temperature is ' + temperature + '°C and the weather is ' + w)
+              msg.channel.send(
+                'Hi ' + msg.author + ',\n' +
+                  '\tCurrently in ' + city + ' (' + country + '), the temperature is ' + temperature + '°C and the weather is ' + w + '.'
+              )
             } else {
-              msg.channel.send('Bonjour ' + msg.author + ',\n\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + ') et le temps est ' + w)
+              msg.channel.send(
+                'Bonjour ' + msg.author + ',\n' +
+                  '\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + ') et le temps est ' + w + '.'
+              )
             }
           }
         })
       } else if (api === 'translate') {
         // message = a.toString().replace(/ /gm, '%20') -> Déjà fait par Google Translate
         promise = callAPI(https, 'translation.googleapis.com', '/language/translate/v2?q=' + message + '&target=en&key=AIzaSyD-IvwfvuUSnIkt9Ahq1uQ0sD73o-rV4rQ')
+        promise.then(function (data) {
+          console.log(JSON.stringify(data))
+        })
+      } else if (api === 'spotify') {
+        message = a.toString().replace(/ /gm, '+')
+        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQDaac7-KtPKjIi-Cz1eXtmN3ydLK0WZNS5p3_taxcdAVCDARP4TLFN9rZqovkQQVws4lWlmzaLldQ91xwVpwSDUXFdfWX__60OS6jwwZMuLxR-jeMy75nA0urpkgmQMc1GkAssc8aAQ'})
+        promise.then(function (data) {
+          console.log(JSON.stringify(data))
+        })
+      } else if (api === 'pokemon') {
+        message = a.toString().replace(/ /gm, '+')
+        promise = callAPI(http, 'pokeapi.co', '/api/v2/pokemon/' + message)
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
@@ -166,20 +205,23 @@ client.on('message', msg => {
     }
   }
   /*
-  * Envoie une requête HTTP
+  * Envoie une requête HTTP Node
   *
   * @param {String} type : type de la requête (http ou https)
   * @param {String} host : nom de domaine ou adresse IP du serveur auquel on envoie la requête
   * @param {String} path : chemin de la requête
+  * @param {Object} headers : en-tête de la requête
   *
   * @return {Promise} promise : Objet promise contenant les données récupérées
   */
-  function callAPI (type, host, path) {
+  function callAPI (type, host, path, headers) {
     var data = ''
     var promise = new Promise(function (resolve, reject) {
       const options = {
+        method: 'GET',
         host: host,
         path: path,
+        headers: headers,
         family: 4
       }
       type.request(options, (res) => {
