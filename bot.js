@@ -3,6 +3,9 @@ const config = require('./config.js')
 const client = new Discord.Client()
 var https = require('https')
 var http = require('http')
+var translate = require('@google-cloud/translate')({
+  key: 'AIzaSyDMVnVtOABpSFj_P3BT8CmlBep2uDaZloQ'
+})
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.username}!`)
@@ -242,9 +245,13 @@ client.on('message', msg => {
         })
       } else if (api === 'translate') {
         // message = a.toString().replace(/ /gm, '%20') -> Déjà fait par Google Translate
-        promise = callAPI(https, 'translation.googleapis.com', '/language/translate/v2?q=' + message + '&target=en&key=AIzaSyD-IvwfvuUSnIkt9Ahq1uQ0sD73o-rV4rQ')
-        promise.then(function (data) {
-          console.log(JSON.stringify(data))
+        translate.translate(message, 'en', function (err, res) {
+          if (err) {
+            console.log(err)
+            msg.channel.send('Navré ' + msg.author + ', une erreur est survenue lors de la traduction de "' + message + '". Voir console pour plus de détails')
+          } else {
+            msg.channel.send('Traduction pour "' + message + '" : "' + res + '" (via Google Translate)')
+          }
         })
       } else if (api === 'spotify') {
         message = a.toString().replace(/ /gm, '+')
