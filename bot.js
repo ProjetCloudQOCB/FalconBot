@@ -3,15 +3,32 @@ const config = require('./config.js')
 const client = new Discord.Client()
 var https = require('https')
 var http = require('http')
+var translate = require('@google-cloud/translate')({
+  key: 'AIzaSyDMVnVtOABpSFj_P3BT8CmlBep2uDaZloQ'
+})
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.username}!`)
 })
 
+var d = new Date()
+var weekday = new Array(7)
+weekday[0] = 'Dimanche'
+weekday[1] = 'Lundi'
+weekday[2] = 'Mardi'
+weekday[3] = 'Mercredi'
+weekday[4] = 'Jeudi'
+weekday[5] = 'Vendredi'
+weekday[6] = 'Samedi'
+var dayNb = d.getDay()
+// var today = weekday[dayNb]
+
 /*
 * Evenement déclenché lors de l'envoi d'un message.
 *
 * Les appels aux différentes API se font à l'aide de requêtes HTTP(S) par la fonction callAPI (cf. callAPI()).
+*
+* Les appels à l'API Google Translate se font à l'aide d'un module Node (cf. var translate).
 *
 * Pour connaître la liste des commandes disponibles : !help
 */
@@ -23,9 +40,9 @@ client.on('message', msg => {
     if (msg.content === '!help') {
       msg.channel.send(
         '\nCommandes disponibles :\n\n\n' +
-        '\tyoutube:NOM_VIDEO : Effectuer une recherche sur Youtube (Chaîne, vidéo, live ou playlist).\n\n' +
-        '\tweather:NOM_VILLE : Obtenir les informations météorologiques d\'une ville.\n\n' +
-        '\ttranslate:PHRASE : Traduire un mot / une phrase de n\'importe quelle langue en anglais.'
+        '\t!youtube NOM_VIDEO : Effectuer une recherche sur Youtube (Chaîne, vidéo, live ou playlist).\n\n' +
+        '\t!weather NOM_VILLE : Obtenir les informations météorologiques d\'une ville.\n\n' +
+        '\t!translate PHRASE : Traduire un mot / une phrase de n\'importe quelle langue en anglais.'
       )
     } else {
       var request = String(msg.content)
@@ -38,7 +55,6 @@ client.on('message', msg => {
         var maxResults = 3
         promise = callAPI(https, 'www.googleapis.com', '/youtube/v3/search?part=snippet&q=' + message + '&maxResults=' + maxResults + '&key=AIzaSyD-IvwfvuUSnIkt9Ahq1uQ0sD73o-rV4rQ')
         promise.then(function (data) {
-          // console.log(JSON.stringify(data))
           var totalResults = data.pageInfo.totalResults
           if (totalResults === 0) {
             msg.channel.send('Navré ' + msg.author + ', votre recherche Youtube "' + message + '" n\'a donné aucun résultat')
@@ -54,8 +70,15 @@ client.on('message', msg => {
                   var title = data.items[0].snippet.title
                   var live = data.items[0].snippet.liveBroadcastContent
                   var views = data.items[0].statistics.viewCount
+                  videoId = data.items[0].id
                   if (live === 'live') {
-                    msg.channel.send('Live : \n\tChaîne : ' + channel + '\n\tTitre : ' + title + '\n\tVues totales : ' + views)
+                    msg.channel.send(
+                      'Live : \n' +
+                        '\tChaîne : ' + channel + '\n' +
+                        '\tTitre : ' + title + '\n' +
+                        '\tVues totales : ' + views + '\n' +
+                        '\tLien : https://www.youtube.com/watch?v=' + videoId + '\n'
+                    )
                   } else {
                     var d = data.items[0].contentDetails.duration.split('PT').pop()
                     var h
@@ -78,7 +101,14 @@ client.on('message', msg => {
                     duration += (h != null) ? h + ':' : ''
                     duration += (m != null) ? m + ':' : ''
                     duration += s
-                    msg.channel.send('Video : \n\tChaîne : ' + channel + '\n\tTitre : ' + title + '\n\tDurée : ' + duration + '\n\tVues : ' + views)
+                    msg.channel.send(
+                      'Video : \n' +
+                        '\tChaîne : ' + channel + '\n' +
+                        '\tTitre : ' + title + '\n' +
+                        '\tDurée : ' + duration + '\n' +
+                        '\tVues : ' + views + '\n' +
+                        '\tLien : https://www.youtube.com/watch?v=' + videoId + '\n'
+                    )
                   }
                 })
               } else if (kind === 'channel') {
@@ -88,7 +118,14 @@ client.on('message', msg => {
                   var nom = data.items[0].snippet.title
                   var videos = data.items[0].statistics.videoCount
                   var subscribers = data.items[0].statistics.subscriberCount
-                  msg.channel.send('Chaîne : \n\tNom : ' + nom + '\n\tNombre de vidéos : ' + videos + '\n\tNombre d\'abonnés : ' + subscribers)
+                  channelId = data.items[0].id
+                  msg.channel.send(
+                    'Chaîne : \n' +
+                      '\tNom de la chaîne: ' + nom + '\n' +
+                      '\tNombre de vidéos : ' + videos + '\n' +
+                      '\tNombre d\'abonnés : ' + subscribers + '\n' +
+                      '\tLien : https://www.youtube.com/channel/' + channelId + '\n'
+                  )
                 })
               } else if (kind === 'playlist') {
                 var playlistId = result.id.playlistId
@@ -97,7 +134,14 @@ client.on('message', msg => {
                   var title = data.items[0].snippet.title
                   var channel = data.items[0].snippet.channelTitle
                   var videos = data.items[0].contentDetails.itemCount
-                  msg.channel.send('Playlist : \n\tChaîne : ' + channel + '\n\tTitre : ' + title + '\n\tNombre de vidéos : ' + videos)
+                  playlistId = data.items[0].id
+                  msg.channel.send(
+                    'Playlist : \n' +
+                      '\tTitre: ' + title + '\n' +
+                      '\tChaîne : ' + channel + '\n' +
+                      '\tNombre de vidéos : ' + videos + '\n' +
+                      '\tLien : https://www.youtube.com/playlist?list=' + playlistId + '\n'
+                  )
                 })
               }
             }
@@ -105,65 +149,147 @@ client.on('message', msg => {
         })
       } else if (api === 'weather') {
         message = message.replace(/ /gm, '-') // La recherche fonctionne toujours avec un "-" dans un nom de ville, contrairement aux " " dans certains cas.
-        promise = callAPI(http, 'api.openweathermap.org', '/data/2.5/weather?q=' + message + '&APPID=46c100d5c1bbf6cbd87bb684098e7d32')
+        promise = callAPI(http, 'api.openweathermap.org', '/data/2.5/weather?q=' + message + '&lang=fr&APPID=46c100d5c1bbf6cbd87bb684098e7d32')
         promise.then(function (data) {
           if (data.message === 'city not found') {
             msg.channel.send('Navré ' + msg.author + ', la ville "' + message + '" est introuvable')
           } else {
             var city = data.name
             var country = data.sys.country
-            var temperature = String((Number(data.main.temp) - 273.15)).substring(0, 4)
-            var w
-            switch (data.weather[0].main) {
-              case 'Thunderstorm':
-                w = 'orageux'
-                break
-              case 'Drizzle':
-                w = 'bruineux'
-                break
-              case 'Rain':
-                w = 'pluvieux'
-                break
-              case 'Snow':
-                w = 'neigeux'
-                break
-              case 'Atmosphere':
-              case 'Haze':
-              case 'Mist':
-                w = 'brumeux'
-                break
-              case 'Clear':
-                w = 'dégagé'
-                break
-              case 'Clouds':
-                w = 'nuageux'
-                break
-              case 'Extreme':
-                w = 'vraiment pas terrible'
-                break
-            }
-            if (w === undefined) {
-              w = '"' + data.weather[0].main.toLowerCase() + '"'
-              msg.channel.send('Hi ' + msg.author + ',\n\tCurrently in ' + city + ' (' + country + '), the temperature is ' + temperature + '°C and the weather is ' + w)
-            } else {
-              msg.channel.send('Bonjour ' + msg.author + ',\n\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + ') et le temps est ' + w)
+            var temperature = celsius(data.main.temp)
+            var weather = data.weather[0].description.toLowerCase()
+            msg.channel.send(
+              'Bonjour ' + msg.author + ',\n\n' +
+                '\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + '). Météo globale : ' + weather + '.'
+            )
+          }
+        })
+      } else if (api === 'forecast') {
+        message = message.replace(/ /gm, '-') // La recherche fonctionne toujours avec un "-" dans un nom de ville, contrairement aux " " dans certains cas.
+        promise = callAPI(http, 'api.openweathermap.org', '/data/2.5/forecast?q=' + message + '&lang=fr&APPID=46c100d5c1bbf6cbd87bb684098e7d32')
+        promise.then(function (data) {
+          if (data.message === 'city not found') {
+            msg.channel.send('Navré ' + msg.author + ', la ville "' + message + '" est introuvable')
+          } else {
+            var res = ''
+            var city = data.city.name
+            var country = data.city.country
+            var temperature = celsius(data.list[0].main.temp)
+            var weather = data.list[0].weather[0].description.toLowerCase()
+            var dt = data.list[0].dt_txt
+            var firstDay = Number(dt.split('-').pop().split(' ').shift())
+            var day = firstDay
+            var weekDayNb = dayNb
+            res +=
+            'Bonjour ' + msg.author + ',\n\n' +
+              '\tIl fait actuellement ' + temperature + '°C à ' + city + ' (' + country + '). Météo globale : ' + weather + '.\n\n\n' +
+              '\tPrévisions sur les prochains jours :\n\n'
+            for (var i = 1; i < data.list.length; i++) {
+              /*
+              * On parcourt chaque objet de l'objet list, qui correspond à toutes les prévisions sur 5 jours.
+              * Chacun de ces objets correspond à une prévision de la météo à une heure précise (toutes les 3 heures, en commencant à 00h00).
+              * On teste si la date du i-ème objet correspond à aujourd'hui ou au lendemain de la date de l'objet i-1.
+              * Si elle correspond à aujourd'hui, on affiche une prévision pour le matin et l'après-midi s'il est avant 09h du matin, seulement de l'après-midi s'il est entre 09h et 15h et pas de prévision s'il est après 15h (on affiche quand-même le température actuelle en tout début du message).
+              * Si elle correspond au lendemain, cela signifie que l'objet i est la prévision de la météo du lendemain à minuit.
+              * On récupère alors les informations du matin (à 09h00 <=> objet i+3) et de l'après-midi (à 15h00 <=> objet i+5) (si elles sont disponibles)
+              */
+              var next = data.list[i]
+              var nextDt = next.dt_txt
+              var nextDay = nextDt.split('-').pop().split(' ').shift()
+              var nextYear = nextDt.split('-')[0]
+              var nextMonth = nextDt.split('-')[1]
+              var hasMorning = false
+              if (Number(nextDay) === firstDay) { // Prévisions de la journée en cours.
+                var h = nextDt.split(' ').pop().split(':').shift()
+                if (Number(h) > 15) {
+                } else {
+                  if (Number(h) === 9) {
+                    var tempAM = celsius(data.list[i].main.temp)
+                    var weatherAM = data.list[i].weather[0].description
+                    res +=
+                      '\t\tAujourd\'hui : \n' +
+                        '\t\t\tMatin : ' + tempAM + '°C, ' + weatherAM + '\n'
+                    hasMorning = true
+                  } else if (Number(h) === 15) {
+                    var tempPM = celsius(data.list[i].main.temp)
+                    var weatherPM = data.list[i].weather[0].description
+                    if (!hasMorning) {
+                      res +=
+                        '\t\tAujourd\'hui : \n'
+                    }
+                    res +=
+                      '\t\t\tAprès-midi : ' + tempPM + '°C, ' + weatherPM + '\n'
+                  }
+                }
+              } else if (Number(nextDay) !== day && (Number(nextDay) === 1 || Number(nextDay) === (day + 1))) { // Prévision du jour i+1
+                var nextTempAM = celsius(data.list[i + 3].main.temp)
+                var nextWeatherAM = data.list[i + 3].weather[0].description
+                var nextTempPM = (data.list[i + 5] === undefined) ? undefined : celsius(data.list[i + 5].main.temp)
+                var nextWeatherPM = (data.list[i + 5] === undefined) ? undefined : data.list[i + 5].weather[0].description
+                day = Number(nextDay)
+                weekDayNb = (weekDayNb === 6) ? 0 : weekDayNb + 1
+                var nextWeekDay = weekday[weekDayNb]
+                res +=
+                  '\t\t' + nextWeekDay + ' (' + nextDay + '-' + nextMonth + '-' + nextYear + ') :\n'
+                if (nextTempAM !== undefined && nextWeatherAM !== undefined) {
+                  res +=
+                    '\t\t\tMatin : ' + nextTempAM + '°C, ' + nextWeatherAM + '\n'
+                  if (nextTempPM !== undefined && nextWeatherPM !== undefined) {
+                    res +=
+                      '\t\t\tAprès-midi : ' + nextTempPM + '°C, ' + nextWeatherPM + '\n\n'
+                  } else {
+                    res +=
+                      '\t\t\tAprès-midi : Les données prévisionnelles seront disponibles d\'ici quelques heures !\n\n'
+                  }
+                } else {
+                  res +=
+                    '\t\t\tLes données prévisionnelles seront disponibles d\'ici quelques heures !\n'
+                }
+              }
+              if (i === data.list.length - 1) {
+                msg.channel.send(res)
+              }
             }
           }
         })
       } else if (api === 'translate') {
         // message = a.toString().replace(/ /gm, '%20') -> Déjà fait par Google Translate
-        promise = callAPI(https, 'translation.googleapis.com', '/language/translate/v2?q=' + message + '&target=en&key=AIzaSyD-IvwfvuUSnIkt9Ahq1uQ0sD73o-rV4rQ')
+        var langue = 'en'
+        if (message.indexOf(' !lang ') !== -1) {
+          var t = message.split(' !lang ')
+          message = t.shift()
+          langue = t.shift().replace(/ /gm, '')
+        }
+        if (langue.length !== 2) {
+          msg.channel.send('Navré ' + msg.author + ', le code langue est invalide : seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est accessible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1')
+        } else {
+          translate.translate(message, langue, function (err, res) {
+            if (err) {
+              console.log(err)
+              msg.channel.send(
+                'Navré ' + msg.author + ', une erreur est survenue lors de la traduction de "' + message + '" dans la langue "' + langue + '".\n' +
+                'Vérifiez que la syntaxe de votre mot ou de votre phrase est correcte est que le code langue existe. Voir console pour plus de détails.\n\n' +
+                'NB: Seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est disponible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1.')
+            } else {
+              msg.channel.send(
+                'Traduction de "' + message + '" : "' + res + '" (langue : ' + langue.toUpperCase() + ')\n\n' +
+                '(via Google Translate)')
+            }
+          })
+        }
+      } else if (api === 'spotify') {
+        message = a.toString().replace(/ /gm, '+')
+        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQC-VqUiiy4FRWQqNWr8ElMkNeioY9Jq1AamYDn7NyO208Taf7ojTtbGVB-6dMd3Y-SHM0OSmuIxWshL27mO90xL4XrduZjeN76kej5QyiY_1bEK8aJt68COFVlWiU7DZXYDDnE1yRxEbmA'})
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
-      } else if (api === 'spotify') {
+      } else if (api === 'pokemon') {
         message = a.toString().replace(/ /gm, '+')
-        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQDaac7-KtPKjIi-Cz1eXtmN3ydLK0WZNS5p3_taxcdAVCDARP4TLFN9rZqovkQQVws4lWlmzaLldQ91xwVpwSDUXFdfWX__60OS6jwwZMuLxR-jeMy75nA0urpkgmQMc1GkAssc8aAQ'})
+        promise = callAPI(http, 'pokeapi.co', '/api/v2/pokemon/' + message)
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
       } else {
-        console.log(msg.author.id + ', ' + client.user.id)
         if (msg.author.id === client.user.id) { // Si on teste le bot dans une conversation privée, le paramètre msg.channel.type est égal à 'dm' : le bot se parle à lui-même
         } else {
           msg.channel.send('Navré ' + msg.author + ', je ne comprends pas votre demande. Veuillez taper "!help" pour afficher la liste des fonctionnalités disponibles.')
@@ -172,7 +298,7 @@ client.on('message', msg => {
     }
   }
   /*
-  * Envoie une requête HTTP
+  * Envoie une requête HTTP Node
   *
   * @param {String} type : type de la requête (http ou https)
   * @param {String} host : nom de domaine ou adresse IP du serveur auquel on envoie la requête
@@ -185,6 +311,7 @@ client.on('message', msg => {
     var data = ''
     var promise = new Promise(function (resolve, reject) {
       const options = {
+        method: 'GET',
         host: host,
         path: path,
         headers: headers,
@@ -204,6 +331,10 @@ client.on('message', msg => {
       }).end()
     })
     return promise
+  }
+  function celsius (t) {
+    t = (Math.round((Number(t) - 273.15) * 10) / 10).toString()
+    return t
   }
 })
 
