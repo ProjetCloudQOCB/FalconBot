@@ -42,3 +42,9 @@ Permet de traduire du contenu de n'importe quelle langue en anglais
 ```
 !translate Bonjour
 ```
+
+* Option !lang : permet de choisir la langue de retour à partir du code pays ISO ALPHA-2
+
+```
+!translate Bonjour !lang es
+```
