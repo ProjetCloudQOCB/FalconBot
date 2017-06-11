@@ -28,6 +28,8 @@ var dayNb = d.getDay()
 *
 * Les appels aux différentes API se font à l'aide de requêtes HTTP(S) par la fonction callAPI (cf. callAPI()).
 *
+* Les appels à l'API Google Translate se font à l'aide d'un module Node (cf. var translate).
+*
 * Pour connaître la liste des commandes disponibles : !help
 */
 client.on('message', msg => {
@@ -245,17 +247,32 @@ client.on('message', msg => {
         })
       } else if (api === 'translate') {
         // message = a.toString().replace(/ /gm, '%20') -> Déjà fait par Google Translate
-        translate.translate(message, 'en', function (err, res) {
-          if (err) {
-            console.log(err)
-            msg.channel.send('Navré ' + msg.author + ', une erreur est survenue lors de la traduction de "' + message + '". Voir console pour plus de détails')
-          } else {
-            msg.channel.send('Traduction pour "' + message + '" : "' + res + '" (via Google Translate)')
-          }
-        })
+        var langue = 'en'
+        if (message.indexOf(' !lang ') !== -1) {
+          var t = message.split(' !lang ')
+          message = t.shift()
+          langue = t.shift().replace(/ /gm, '')
+        }
+        if (langue.length !== 2) {
+          msg.channel.send('Navré ' + msg.author + ', le code langue est invalide : seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est accessible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1')
+        } else {
+          translate.translate(message, langue, function (err, res) {
+            if (err) {
+              console.log(err)
+              msg.channel.send(
+                'Navré ' + msg.author + ', une erreur est survenue lors de la traduction de "' + message + '" dans la langue "' + langue + '".\n' +
+                'Vérifiez que la syntaxe de votre mot ou de votre phrase est correcte est que le code langue existe. Voir console pour plus de détails.\n\n' +
+                'NB: Seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est disponible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1.')
+            } else {
+              msg.channel.send(
+                'Traduction de "' + message + '" : "' + res + '" (langue : ' + langue.toUpperCase() + ')\n\n' +
+                '(via Google Translate)')
+            }
+          })
+        }
       } else if (api === 'spotify') {
         message = a.toString().replace(/ /gm, '+')
-        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQDaac7-KtPKjIi-Cz1eXtmN3ydLK0WZNS5p3_taxcdAVCDARP4TLFN9rZqovkQQVws4lWlmzaLldQ91xwVpwSDUXFdfWX__60OS6jwwZMuLxR-jeMy75nA0urpkgmQMc1GkAssc8aAQ'})
+        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQC-VqUiiy4FRWQqNWr8ElMkNeioY9Jq1AamYDn7NyO208Taf7ojTtbGVB-6dMd3Y-SHM0OSmuIxWshL27mO90xL4XrduZjeN76kej5QyiY_1bEK8aJt68COFVlWiU7DZXYDDnE1yRxEbmA'})
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
