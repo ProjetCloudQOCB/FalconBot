@@ -3,6 +3,8 @@ const config = require('./config.js')
 const client = new Discord.Client()
 var https = require('https')
 var http = require('http')
+var Twit = require('twit')
+var twit = new Twit(config.twitter)
 var translate = require('@google-cloud/translate')({
   key: 'AIzaSyDMVnVtOABpSFj_P3BT8CmlBep2uDaZloQ'
 })
@@ -40,9 +42,15 @@ client.on('message', msg => {
     if (msg.content === '!help') {
       msg.channel.send(
         '\nCommandes disponibles :\n\n\n' +
-        '\t!youtube NOM_VIDEO : Effectuer une recherche sur Youtube (Chaîne, vidéo, live ou playlist).\n\n' +
+        '\t!youtube RECHERCHE : Effectuer une recherche sur Youtube (Chaîne, vidéo, live ou playlist).\n\n' +
+        '\t!spotify RECHERCHE : Effectuer une recherche sur Spotify (Chaîne, vidéo, live ou playlist).\n' +
+        '\t\tOption : !spotify RECHERCHE !type TYPE: Rechercher seulement une musique, un artiste ou un album sur Spotify. Types disponibles : "track", "artist", "album".' +
         '\t!weather NOM_VILLE : Obtenir les informations météorologiques d\'une ville.\n\n' +
-        '\t!translate PHRASE : Traduire un mot / une phrase de n\'importe quelle langue en anglais.'
+        '\t!forecast NOM_VILLE : Obtenir les prévisions météorologiques d\'une ville sur les 5 prochains jours.\n\n' +
+        '\t!translate PHRASE : Traduire un mot / une phrase de n\'importe quelle langue en anglais.\n' +
+        '\t\tOption : !translate PHRASE !lang CODE_LANGUE: Traduire un mot / une phrase de n\'importe quelle langue vers la langue spécifiée par le code langue. Attention : seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est accessible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1\n\n' +
+        '\t!twitter !tweet TWEET : Permet de tweeter avec le compte Falcon Team.\n\n' +
+        '\t!twitter !stream STREAM : Permet de rechercher sur twitter tous les #STREAM.'
       )
     } else {
       var request = String(msg.content)
@@ -289,6 +297,32 @@ client.on('message', msg => {
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
+      } else if (api === 'twitter') {
+        message = message.split(' ')
+        var fonction = message.shift()
+        if (fonction === '!tweet') {
+          message = message.join().replace(/,/gm, ' ')
+          var Tweet = message
+          if (Tweet.length > 140) {
+            msg.channel.send('Navré ' + msg.author + ', votre tweet est trop long. La taille maximal autorisé est de 140 caractères.')
+          } else {
+            var tweet = {
+              status: Tweet
+            }
+            twit.post('statuses/update', tweet, tweeted)
+          }
+        } else if (fonction === '!stream') {
+          twit.stream('statuses/filter', {track: 'FalconIsep'}, function (stream) {
+            stream.on('data', function (tweet) {
+              msg.channel.send(" On t'a taggué dans ce tweet : " + tweet.text)
+            })
+            stream.on('error', function (error) {
+              console.log(error)
+            })
+          })
+        } else {
+          msg.channel.send('Après "!twitter ", utilisez "!tweet [msg]" pour tweeter ou "!stream" pour rechercher les tweet adressé à @FalconIsep.')
+        }
       } else {
         if (msg.author.id === client.user.id) { // Si on teste le bot dans une conversation privée, le paramètre msg.channel.type est égal à 'dm' : le bot se parle à lui-même
         } else {
@@ -331,6 +365,13 @@ client.on('message', msg => {
       }).end()
     })
     return promise
+  }
+  function tweeted (err, data, response) {
+    if (err) {
+      msg.channel.send('Tweet non envoyé. Une erreur est survenue.')
+    } else {
+      msg.channel.send('Tweet envoyé avec succès : ' + Tweet)
+    }
   }
   function celsius (t) {
     t = (Math.round((Number(t) - 273.15) * 10) / 10).toString()
