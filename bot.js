@@ -5,6 +5,9 @@ var https = require('https')
 var http = require('http')
 var Twit = require('twit')
 var twit = new Twit(config.twitter)
+var translate = require('@google-cloud/translate')({
+  key: 'AIzaSyDMVnVtOABpSFj_P3BT8CmlBep2uDaZloQ'
+})
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.username}!`)
@@ -26,6 +29,8 @@ var dayNb = d.getDay()
 * Evenement déclenché lors de l'envoi d'un message.
 *
 * Les appels aux différentes API se font à l'aide de requêtes HTTP(S) par la fonction callAPI (cf. callAPI()).
+*
+* Les appels à l'API Google Translate se font à l'aide d'un module Node (cf. var translate).
 *
 * Pour connaître la liste des commandes disponibles : !help
 */
@@ -73,12 +78,14 @@ client.on('message', msg => {
                   var title = data.items[0].snippet.title
                   var live = data.items[0].snippet.liveBroadcastContent
                   var views = data.items[0].statistics.viewCount
+                  videoId = data.items[0].id
                   if (live === 'live') {
                     msg.channel.send(
                       'Live : \n' +
                         '\tChaîne : ' + channel + '\n' +
                         '\tTitre : ' + title + '\n' +
-                        '\tVues totales : ' + views
+                        '\tVues totales : ' + views + '\n' +
+                        '\tLien : https://www.youtube.com/watch?v=' + videoId + '\n'
                     )
                   } else {
                     var d = data.items[0].contentDetails.duration.split('PT').pop()
@@ -107,7 +114,8 @@ client.on('message', msg => {
                         '\tChaîne : ' + channel + '\n' +
                         '\tTitre : ' + title + '\n' +
                         '\tDurée : ' + duration + '\n' +
-                        '\tVues : ' + views
+                        '\tVues : ' + views + '\n' +
+                        '\tLien : https://www.youtube.com/watch?v=' + videoId + '\n'
                     )
                   }
                 })
@@ -118,11 +126,13 @@ client.on('message', msg => {
                   var nom = data.items[0].snippet.title
                   var videos = data.items[0].statistics.videoCount
                   var subscribers = data.items[0].statistics.subscriberCount
+                  channelId = data.items[0].id
                   msg.channel.send(
                     'Chaîne : \n' +
-                      '\tNom : ' + nom + '\n' +
+                      '\tNom de la chaîne: ' + nom + '\n' +
                       '\tNombre de vidéos : ' + videos + '\n' +
-                      '\tNombre d\'abonnés : ' + subscribers
+                      '\tNombre d\'abonnés : ' + subscribers + '\n' +
+                      '\tLien : https://www.youtube.com/channel/' + channelId + '\n'
                   )
                 })
               } else if (kind === 'playlist') {
@@ -132,11 +142,13 @@ client.on('message', msg => {
                   var title = data.items[0].snippet.title
                   var channel = data.items[0].snippet.channelTitle
                   var videos = data.items[0].contentDetails.itemCount
+                  playlistId = data.items[0].id
                   msg.channel.send(
                     'Playlist : \n' +
+                      '\tTitre: ' + title + '\n' +
                       '\tChaîne : ' + channel + '\n' +
-                      '\tTitre : ' + title + '\n' +
-                      '\tNombre de vidéos : ' + videos
+                      '\tNombre de vidéos : ' + videos + '\n' +
+                      '\tLien : https://www.youtube.com/playlist?list=' + playlistId + '\n'
                   )
                 })
               }
@@ -250,13 +262,32 @@ client.on('message', msg => {
         })
       } else if (api === 'translate') {
         // message = a.toString().replace(/ /gm, '%20') -> Déjà fait par Google Translate
-        promise = callAPI(https, 'translation.googleapis.com', '/language/translate/v2?q=' + message + '&target=en&key=AIzaSyD-IvwfvuUSnIkt9Ahq1uQ0sD73o-rV4rQ')
-        promise.then(function (data) {
-          console.log(JSON.stringify(data))
-        })
+        var langue = 'en'
+        if (message.indexOf(' !lang ') !== -1) {
+          var t = message.split(' !lang ')
+          message = t.shift()
+          langue = t.shift().replace(/ /gm, '')
+        }
+        if (langue.length !== 2) {
+          msg.channel.send('Navré ' + msg.author + ', le code langue est invalide : seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est accessible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1')
+        } else {
+          translate.translate(message, langue, function (err, res) {
+            if (err) {
+              console.log(err)
+              msg.channel.send(
+                'Navré ' + msg.author + ', une erreur est survenue lors de la traduction de "' + message + '" dans la langue "' + langue + '".\n' +
+                'Vérifiez que la syntaxe de votre mot ou de votre phrase est correcte est que le code langue existe. Voir console pour plus de détails.\n\n' +
+                'NB: Seuls les codes ISO 639-1 (codes à deux lettres) sont accéptés. Une liste des codes langue valides est disponible à cette adresse https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1.')
+            } else {
+              msg.channel.send(
+                'Traduction de "' + message + '" : "' + res + '" (langue : ' + langue.toUpperCase() + ')\n\n' +
+                '(via Google Translate)')
+            }
+          })
+        }
       } else if (api === 'spotify') {
         message = a.toString().replace(/ /gm, '+')
-        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQDaac7-KtPKjIi-Cz1eXtmN3ydLK0WZNS5p3_taxcdAVCDARP4TLFN9rZqovkQQVws4lWlmzaLldQ91xwVpwSDUXFdfWX__60OS6jwwZMuLxR-jeMy75nA0urpkgmQMc1GkAssc8aAQ'})
+        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQC-VqUiiy4FRWQqNWr8ElMkNeioY9Jq1AamYDn7NyO208Taf7ojTtbGVB-6dMd3Y-SHM0OSmuIxWshL27mO90xL4XrduZjeN76kej5QyiY_1bEK8aJt68COFVlWiU7DZXYDDnE1yRxEbmA'})
         promise.then(function (data) {
           console.log(JSON.stringify(data))
         })
