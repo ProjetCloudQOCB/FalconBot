@@ -62,3 +62,17 @@ Permet de traduire du contenu de n'importe quelle langue en anglais
 ```
 !translate Bonjour !lang es
 ```
+
+### Twitter
+
+Permet de tweeter un contenu voulu avec le compte @FalconIsep 
+
+```
+!twitter !tweet Ceci est un tweet 
+```
+
+Permet de rechercher sur twitter tout les tweets adressés à @FalconIsep
+
+```
+!twitter !stream 
+```
