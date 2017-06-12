@@ -5,6 +5,11 @@ var https = require('https')
 var http = require('http')
 var Twit = require('twit')
 var twit = new Twit(config.twitter)
+var SpotifyWebApi = require('spotify-web-api-node')
+var spotify = new SpotifyWebApi({
+  clientId: '4e47d68ae0364219b4c7066abb195d35',
+  clientSecret: '2556088e3b7d4061bb5fd7dfa8de8fe5'
+})
 var translate = require('@google-cloud/translate')({
   key: 'AIzaSyDMVnVtOABpSFj_P3BT8CmlBep2uDaZloQ'
 })
@@ -286,10 +291,148 @@ client.on('message', msg => {
           })
         }
       } else if (api === 'spotify') {
-        message = a.toString().replace(/ /gm, '+')
-        promise = callAPI(https, 'api.spotify.com', '/v1/search?q=' + message + '&limit=3&type=album,artist,track', {'Authorization': 'Bearer BQC-VqUiiy4FRWQqNWr8ElMkNeioY9Jq1AamYDn7NyO208Taf7ojTtbGVB-6dMd3Y-SHM0OSmuIxWshL27mO90xL4XrduZjeN76kej5QyiY_1bEK8aJt68COFVlWiU7DZXYDDnE1yRxEbmA'})
-        promise.then(function (data) {
-          console.log(JSON.stringify(data))
+        // exemple : '!spotify marecherche'
+        // exemple : '!spotify macarena !type track'
+        var getKey = spotify.clientCredentialsGrant()
+        getKey.then(data => {
+          spotify.setAccessToken(data.body['access_token'])
+          var types = ['track', 'artist', 'album']
+          var limit = 1
+          var hasType = false
+          if (message.indexOf(' !type ') !== -1) {
+            var t = message.split(' !type ')
+            message = t.shift()
+            var s = t.shift().replace(/ /g, '')
+            if (s === 'track' || s === 'artist' || s === 'album') {
+              types = [s]
+              limit = 3
+              hasType = true
+            } else {
+              msg.channel.send('Navré ' + msg.author + ', le type demandé n\'est pas valide. Veuillez choisir entre "track", "artist" ou "album".\n\nExemple : !spotify recherche !type track')
+              return
+            }
+          }
+          promise = spotify.search(message, types, {'limit': limit})
+          promise.then(function (data) {
+            var tracksNumber
+            var artistsNumber
+            var albumsNumber
+            if (!hasType) {
+              msg.channel.send('Meileur résultat parmis :\n\n')
+              tracksNumber = data.body.tracks.total
+              artistsNumber = data.body.artists.total
+              albumsNumber = data.body.albums.total
+              if (tracksNumber !== 0) {
+                var track = data.body.tracks.items[0].name
+                var trackArtists = data.body.tracks.items[0].artists[0].name
+                var trackURL = data.body.tracks.items[0].external_urls.spotify
+                msg.channel.send(
+                  '\tMusique :\n' +
+                  '\t\tTitre : ' + track + '\n' +
+                  '\t\tArtiste(s) : ' + trackArtists + '\n' +
+                  '\t\tLien : ' + trackURL + '\n\n'
+                )
+              } else {
+                msg.channel.send(
+                  '\tMusique : Aucun résultat.\n'
+                )
+              }
+              if (artistsNumber !== 0) {
+                var artist = data.body.artists.items[0].name
+                var artistFollowers = data.body.artists.items[0].followers.total
+                var artistURL = data.body.artists.items[0].external_urls.spotify
+                msg.channel.send(
+                  '\tArtiste :\n' +
+                  '\t\tNom : ' + artist + '\n' +
+                  '\t\tNombre de followers : ' + artistFollowers + '\n' +
+                  '\t\tLien : ' + artistURL + '\n\n'
+                )
+              } else {
+                msg.channel.send(
+                  '\tArtiste : Aucun résultat.\n'
+                )
+              }
+              if (albumsNumber !== 0) {
+                var album = data.body.albums.items[0].name
+                var albumArtists = data.body.albums.items[0].artists[0].name
+                var albumURL = data.body.albums.items[0].external_urls.spotify
+                msg.channel.send(
+                  '\tAlbum :\n' +
+                  '\t\tNom : ' + album + '\n' +
+                  '\t\tArtiste(s) : ' + albumArtists + '\n' +
+                  '\t\tLien : ' + albumURL + '\n'
+                )
+              } else {
+                msg.channel.send(
+                  '\tAlbum : Aucun résultat.\n'
+                )
+              }
+            } else {
+              var i = 0
+              var type = types.toString() + 's'
+              if (type === 'tracks') {
+                tracksNumber = data.body.tracks.total
+                if (tracksNumber === 0) {
+                  msg.channel.send('Navré ' + msg.author + ', aucune musique ne correspond à la recherche "' + message + '" !')
+                } else {
+                  var nTracks = data.body.tracks.items.length
+                  while (i < nTracks) {
+                    var tName = data.body.tracks.items[i].name
+                    var tArtists = data.body.tracks.items[i].artists[0].name
+                    var tURL = data.body.tracks.items[i].external_urls.spotify
+                    msg.channel.send(
+                      '\tMusique ' + (i + 1) + ' :\n' +
+                      '\t\tTitre : ' + tName + '\n' +
+                      '\t\tArtiste(s) : ' + tArtists + '\n' +
+                      '\t\tLien : ' + tURL + '\n\n'
+                    )
+                    i++
+                  }
+                }
+              } else if (type === 'albums') {
+                albumsNumber = data.body.albums.total
+                if (albumsNumber === 0) {
+                  msg.channel.send('Navré ' + msg.author + ', aucun album ne correspond à la recherche "' + message + '" !')
+                } else {
+                  var nAlbums = data.body.albums.items.length
+                  while (i < nAlbums) {
+                    var aName = data.body.albums.items[i].name
+                    var aArtists = data.body.albums.items[i].artists[0].name
+                    var aURL = data.body.albums.items[i].external_urls.spotify
+                    msg.channel.send(
+                      '\tAlbum ' + (i + 1) + ' :\n' +
+                      '\t\tNom : ' + aName + '\n' +
+                      '\t\tArtiste(s) : ' + aArtists + '\n' +
+                      '\t\tLien : ' + aURL + '\n\n'
+                    )
+                    i++
+                  }
+                }
+              } else if (type === 'artists') {
+                artistsNumber = data.body.artists.total
+                if (artistsNumber === 0) {
+                  msg.channel.send('Navré ' + msg.author + ', aucun artiste ne correspond à la recherche "' + message + '" !')
+                } else {
+                  var nArtists = data.body.artists.items.length
+                  while (i < nArtists) {
+                    var artistName = data.body.artists.items[i].name
+                    var aFollowers = data.body.artists.items[i].followers.total
+                    var artistsURL = data.body.artists.items[i].external_urls.spotify
+                    msg.channel.send(
+                      '\tArtiste ' + (i + 1) + ' :\n' +
+                      '\t\tNom : ' + artistName + '\n' +
+                      '\t\tNombre de followers : ' + aFollowers + '\n' +
+                      '\t\tLien : ' + artistsURL + '\n\n'
+                    )
+                    i++
+                  }
+                }
+              }
+            }
+          }, function (err) {
+            msg.channel.send('Navré ' + msg.author + ', une erreur est survenue lors de la recherche "' + message + '". Voir console pour plus d\'infos.')
+            console.error(err)
+          })
         })
       } else if (api === 'pokemon') {
         message = a.toString().replace(/ /gm, '+')
