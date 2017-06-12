@@ -1,5 +1,5 @@
 module.exports = {
-  token: 'MzEyNTA2NzE2MjMzMjY5MjQ4.C_cZjw.ryDbpfZ3Bk2r8fC7kJEt4DV9TZ',
+  token: 'MzEyNTA2NzE2MjMzMjY5MjQ4.DCCEHA.mWoZcXZ5syfpA-TvYYQ8vFFRhhk',
   channel: '307410406211584001',
   twitter: {
     consumer_key: 'srrgmvkfNyqWah0WduJVN9So2',
