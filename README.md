@@ -27,6 +27,20 @@ Permet de rechercher du contenu sur Youtube (vidéos, chaînes, playlists et liv
 !youtube sport live
 ```
 
+### Spotify
+
+Permet de rechercher du contenu sur Spotify (musiques, artistes et albums)
+
+```
+!spotify Smash Mouth - All Star
+```
+
+* Option !type : permet de choisir le type de contenu à rechercher ('track', 'artist' & 'album')
+
+```
+!spotify Kygo !type artist
+```
+
 ### Open Weather Map
 
 Permet de connaître la météo d'une ville
@@ -41,4 +55,10 @@ Permet de traduire du contenu de n'importe quelle langue en anglais
 
 ```
 !translate Bonjour
+```
+
+* Option !lang : permet de choisir la langue de retour à partir du code pays ISO ALPHA-2
+
+```
+!translate Bonjour !lang es
 ```
